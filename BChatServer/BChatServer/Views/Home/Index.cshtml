@@ -1,0 +1,107 @@
+﻿@model IEnumerable<BChat.Data.Model.Message>
+@{
+    ViewData["Title"] = "Home Page";
+    var messageContent = "";
+}
+
+@for (int i = 0; i < Model.Count(); i++)
+{
+    var message = Model.ElementAt(i);
+    messageContent += message.Timestamp.ToString("MM/dd/yyyy HH:mm") +" - "+ message.User + ": " + message.Content;
+    if (i+1 < Model.Count())
+    {
+        messageContent += "\n";
+    }
+}
+
+<div class="text-center">
+    Messages:
+    
+    <fieldset>
+        <p>
+            @Html.TextArea("messagesBx", @messageContent, 15, 100, new { @class = "" })
+        </p>
+        <p >
+            <div>
+                Command: @Html.TextBox("command", "/stock=") 
+                <input id="submitBt" type="button" , value="Submit" />
+            </div>
+        </p>
+    </fieldset>
+
+</div>
+
+<script type="text/javascript">
+    function validateCommand(input) {
+        var list = input.split("=");
+        var cmd = list[0];
+        var value = list[1];
+        if (cmd === '/stock') {
+            return value;
+        } else {
+            return undefined;
+        }
+    }
+
+    $(function() {
+        $("#submitBt")
+            .click(function() {
+
+                var message = $("#messagesBx").val();
+                var input = $('#command').val();
+                var value = validateCommand(input);
+                if (value === undefined) {
+                    alert("Command not recognized");
+                } else {
+                    var date = new Date();
+                    var user = "@User.Identity.Name";
+                    message += "\n" + date.format('m/d/Y h:i') + " - " + user + ": " + value;
+
+                    var partialUrl = '@Url.Action("AddMessage", "Home")';
+                    $.post(partialUrl,
+                        {
+                            Content: value,
+                            User: user
+                        },
+                        function(html) {
+                            console.log("Result");
+                            $("#messagesBx").val(message);
+                            $("#messagesBx").scrollTop(9999);
+                        }
+                    );
+                }
+            });
+    });
+
+    $(document).ready(function () {
+        //Move the scroll to the bottom
+        $("#messagesBx").scrollTop(9999);
+
+        //Set the timer to refresh the page every 3 secs
+        var timerId = setInterval(function() {
+            var partialUrl = '@Url.Action("GetMessages", "Home")';
+            $.get(partialUrl,
+                function(result) {
+                    $("#messagesBx").val("");
+                    var text = "";
+                    for (var i = 0; i < result.length; i++) {
+                        var message = result[i];
+                        var date = new Date(message.timestamp) ;
+                        var user = message.user;
+                        var content = message.content;
+                        text += date.format('m/d/Y h:i')  + " - " + user + ": " + content;
+                        if (i+1 < result.length)
+                        {
+                            text += "\n";
+                        }
+                    }
+                    $("#messagesBx").val(text);
+                    $("#messagesBx").scrollTop(9999);
+                }
+            );
+
+        }, 3000);
+    });
+
+
+</script>
